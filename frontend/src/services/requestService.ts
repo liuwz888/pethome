@@ -90,6 +90,7 @@ export enum RequestType {
 
 export enum RequestStatus {
   BOOKED = 'BOOKED',
+  PUBLISHED = 'PUBLISHED',
   ACCEPTED = 'ACCEPTED',
   ON_WAY = 'ON_WAY',
   STARTED = 'STARTED',
@@ -101,6 +102,7 @@ export enum RequestStatus {
 
 export enum ServicePhase {
   BOOKED = 'BOOKED',
+  PUBLISHED = 'PUBLISHED',
   ACCEPTED = 'ACCEPTED',
   PREPARING = 'PREPARING',
   ARRIVED = 'ARRIVED',
@@ -138,7 +140,7 @@ export const requestService = {
 
   // 更新需求状态
   updateStatus: async (id: number, status: RequestStatus): Promise<ServiceRequest> => {
-    const response = await apiWithAuth.patch(`/appointments/${id}/status`, { status: status })
+    const response = await apiWithAuth.patch(`/appointments/${id}/publish`, { status: status })
     return response.data
   },
 

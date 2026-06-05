@@ -99,14 +99,15 @@ public class Appointment {
     }
 
     public enum AppointmentStatus {
-        BOOKED("待接单"),       // 需求方已预约，等待服务方接单
-        ACCEPTED("已接单"),    // 服务方已接单
-        ON_WAY("服务中"),      // 服务方已出发，正在上门
-        STARTED("服务中"),     // 服务方已入户，开始服务
-        COMPLETED("已完成"),   // 服务已完成，待支付
-        PAID("已支付"),        // 用户已支付
+        BOOKED("待发布"),       // 需求方已创建，待发布
+        PUBLISHED("待接单"),    // 需求已发布，等待服务方接单
+        ACCEPTED("已接单"),     // 服务方已接单
+        ON_WAY("服务中"),       // 服务方已出发，正在上门
+        STARTED("服务中"),      // 服务方已入户，开始服务
+        COMPLETED("已完成"),    // 服务已完成，待支付
+        PAID("已支付"),         // 用户已支付
         CANCELLED("已取消"),
-        NO_SHOW("用户爽约");   // 用户未到场
+        NO_SHOW("用户爽约");    // 用户未到场
 
         private final String description;
 
@@ -120,13 +121,14 @@ public class Appointment {
     }
 
     public enum ServicePhase {
-        BOOKED("待接单"),              // 阶段1: 预约创建
-        ACCEPTED("已接单"),            // 阶段2: 服务方接单
-        PREPARING("上门准备"),         // 阶段3: 服务方准备中
-        ARRIVED("已入户"),            // 阶段4: 服务方已到达
-        IN_PROGRESS("服务中"),         // 阶段5: 正在服务
-        COMPLETED("服务完成"),         // 阶段6: 服务完成，待离场
-        CLOSED("已完成");             // 阶段7: 完成评价，流程结束
+        BOOKED("需求创建"),              // 阶段1: 需求创建
+        PUBLISHED("需求发布"),            // 阶段2: 需求已发布
+        ACCEPTED("服务方接单"),          // 阶段3: 服务方接单
+        PREPARING("上门准备"),           // 阶段4: 服务方准备中
+        ARRIVED("已入户"),              // 阶段5: 服务方已到达
+        IN_PROGRESS("服务中"),           // 阶段6: 正在服务
+        COMPLETED("服务完成"),           // 阶段7: 服务完成，待离场
+        CLOSED("已完成");               // 阶段8: 完成评价，流程结束
 
         private final String description;
 

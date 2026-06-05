@@ -136,9 +136,15 @@ export const appointmentService = {
     return response.data
   },
 
-  // 更新预约状态
+  // 创建需求（内部调用 createAppointment）
+  createRequest: async (data: CreateAppointmentRequest): Promise<Appointment> => {
+    const response = await apiWithAuth.post('/appointments', data)
+    return response.data
+  },
+
+  // 更新需求状态
   updateStatus: async (id: number, status: AppointmentStatus): Promise<Appointment> => {
-    const response = await apiWithAuth.patch(`/appointments/${id}/status`, { status: status })
+    const response = await apiWithAuth.patch(`/appointments/${id}/publish`, { status: status })
     return response.data
   },
 

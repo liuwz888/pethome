@@ -58,8 +58,8 @@ public class AppointmentService {
 
     /**
      * 创建预约
-     * 状态: BOOKED (待接单)
-     * 流程阶段: BOOKED (待接单)
+     * 状态: BOOKED (待发布)
+     * 流程阶段: BOOKED (需求创建)
      */
     @Transactional
     public AppointmentResponse createAppointment(AppointmentRequest request) {
@@ -111,9 +111,9 @@ public class AppointmentService {
         }
 
         // 记录创建环节（在保存后，确保 appointment 有 ID）
-        recordPhase(savedAppointment, Appointment.ServicePhase.BOOKED, null, currentUser);
+        recordPhase(savedAppointment, Appointment.ServicePhase.BOOKED, "需求创建成功", currentUser);
 
-        log.info("创建预约成功: {} by user: {}", savedAppointment.getAppointmentNumber(), currentUser.getUsername());
+        log.info("创建需求成功: {} by user: {}", savedAppointment.getAppointmentNumber(), currentUser.getUsername());
 
         // 发送预约确认邮件
         try {
@@ -127,6 +127,42 @@ public class AppointmentService {
         }
 
         return new AppointmentResponse(savedAppointment);
+    }
+
+    /**
+     * 发布需求
+     * 状态: BOOKED -> PUBLISHED (待接单)
+     * 流程阶段: BOOKED -> PUBLISHED
+     */
+    @Transactional
+    public AppointmentResponse publishAppointment(Long appointmentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("需求不存在: " + appointmentId));
+
+        // 检查是否是需求方操作
+        User currentUser = getAuthenticatedUser();
+        if (!appointment.getPetOwner().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("只有需求方才能发布需求");
+        }
+
+        // 检查当前状态
+        if (appointment.getStatus() != Appointment.AppointmentStatus.BOOKED) {
+            throw new RuntimeException("只有待发布的需求才能发布");
+        }
+
+        // 更新状态为已发布
+        appointment.setStatus(Appointment.AppointmentStatus.PUBLISHED);
+        appointment.setPhase(Appointment.ServicePhase.PUBLISHED);
+        appointment.setUpdatedAt(LocalDateTime.now());
+
+        Appointment updated = appointmentRepository.save(appointment);
+
+        // 记录发布环节
+        recordPhase(updated, Appointment.ServicePhase.PUBLISHED, "需求已发布，等待服务方接单", currentUser);
+
+        log.info("发布需求成功: {} by user: {}", appointmentId, currentUser.getUsername());
+
+        return new AppointmentResponse(updated);
     }
 
     /**
@@ -364,6 +400,11 @@ public class AppointmentService {
         boolean isValid = false;
         switch (current) {
             case BOOKED:
+                isValid = target == Appointment.AppointmentStatus.PUBLISHED ||
+                         target == Appointment.AppointmentStatus.CANCELLED ||
+                         target == Appointment.AppointmentStatus.NO_SHOW;
+                break;
+            case PUBLISHED:
                 isValid = target == Appointment.AppointmentStatus.ACCEPTED ||
                          target == Appointment.AppointmentStatus.CANCELLED ||
                          target == Appointment.AppointmentStatus.NO_SHOW;
@@ -404,6 +445,7 @@ public class AppointmentService {
     private Appointment.ServicePhase mapStatusToPhase(Appointment.AppointmentStatus status) {
         switch (status) {
             case BOOKED: return Appointment.ServicePhase.BOOKED;
+            case PUBLISHED: return Appointment.ServicePhase.PUBLISHED;
             case ACCEPTED: return Appointment.ServicePhase.ACCEPTED;
             case ON_WAY: return Appointment.ServicePhase.PREPARING;
             case STARTED: return Appointment.ServicePhase.IN_PROGRESS;

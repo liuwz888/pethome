@@ -20,7 +20,7 @@ const AppointmentCreatePage: React.FC = () => {
     paymentMethod: 'WECHAT'
   })
 
-  // 设置默认预约时间为下一小时
+  // 设置默认时间为下一小时
   useEffect(() => {
     const now = new Date()
     now.setHours(now.getHours() + 1)
@@ -36,12 +36,12 @@ const AppointmentCreatePage: React.FC = () => {
     e.preventDefault()
 
     if (!formData.title) {
-      alert('请输入预约标题')
+      alert('请输入标题')
       return
     }
 
     if (!formData.scheduledTime) {
-      alert('请选择预约时间')
+      alert('请选择服务时间')
       return
     }
 
@@ -61,12 +61,16 @@ const AppointmentCreatePage: React.FC = () => {
         paymentMethod: formData.paymentMethod
       }
 
-      await appointmentService.createAppointment(request)
-      alert('预约创建成功！')
-      navigate('/appointments')
+      const result = await appointmentService.createRequest(request)
+      // 创建成功后，自动发布
+      if (result.id) {
+        await appointmentService.updateStatus(result.id, AppointmentStatus.PUBLISHED)
+        alert('需求发布成功！')
+        navigate('/appointments')
+      }
     } catch (error) {
-      console.error('创建预约失败:', error)
-      alert('创建预约失败，请检查输入并重试')
+      console.error('发布需求失败:', error)
+      alert('发布需求失败，请检查输入并重试')
     } finally {
       setIsLoading(false)
     }
@@ -88,7 +92,7 @@ const AppointmentCreatePage: React.FC = () => {
     return (
       <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem', textAlign: 'center' }}>
         <h2>请先登录</h2>
-        <p>请登录后再创建预约</p>
+        <p>请登录后再创建需求</p>
         <button onClick={() => navigate('/login')} className="btn" style={{ marginTop: '1rem' }}>
           前往登录
         </button>
@@ -98,8 +102,8 @@ const AppointmentCreatePage: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '2rem' }}>
-      <h2>创建预约</h2>
-      <p style={{ color: '#666', marginBottom: '1.5rem' }}>填写以下信息预约宠物服务</p>
+      <h2>发布需求</h2>
+      <p style={{ color: '#666', marginBottom: '1.5rem' }}>填写以下信息发布服务需求</p>
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {/* 服务类型 */}
@@ -121,24 +125,24 @@ const AppointmentCreatePage: React.FC = () => {
           </select>
         </div>
 
-        {/* 预约标题 */}
+        {/* 需求标题 */}
         <div>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-            预约标题 *
+            标题 *
           </label>
           <input
             type="text"
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder="例如：宠物美容预约"
+            placeholder="例如：宠物美容需求"
             style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #ddd' }}
           />
         </div>
 
-        {/* 预约时间 */}
+        {/* 服务时间 */}
         <div>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
-            预约时间 *
+            服务时间 *
           </label>
           <input
             type="datetime-local"
@@ -261,7 +265,7 @@ const AppointmentCreatePage: React.FC = () => {
             }}
             disabled={isLoading}
           >
-            {isLoading ? '创建中...' : '确认创建'}
+            {isLoading ? '发布中...' : '确认发布'}
           </button>
           <button
             type="button"

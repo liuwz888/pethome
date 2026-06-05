@@ -22,13 +22,24 @@ public class AppointmentController {
 
     /**
      * 创建预约
-     * 状态: BOOKED (待接单)
+     * 状态: BOOKED (待发布)
      */
     @PostMapping
     @PreAuthorize("hasRole('PET_OWNER')")
     public ResponseEntity<AppointmentResponse> createAppointment(@RequestBody AppointmentRequest request) {
         AppointmentResponse appointment = appointmentService.createAppointment(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(appointment);
+    }
+
+    /**
+     * 发布需求
+     * 状态: BOOKED -> PUBLISHED (待接单)
+     */
+    @PatchMapping("/{id}/publish")
+    @PreAuthorize("hasRole('PET_OWNER')")
+    public ResponseEntity<AppointmentResponse> publishAppointment(@PathVariable Long id) {
+        AppointmentResponse appointment = appointmentService.publishAppointment(id);
+        return ResponseEntity.ok(appointment);
     }
 
     /**

@@ -27,19 +27,20 @@ const AppointmentListPage: React.FC = () => {
   }
 
   const cancelAppointment = async (id: number) => {
-    if (!window.confirm('确定要取消这个预约吗？')) return
+    if (!window.confirm('确定要取消这个需求吗？')) return
     try {
       await appointmentService.cancelAppointment(id)
       loadAppointments()
     } catch (error) {
-      console.error('取消预约失败:', error)
-      alert('取消预约失败，请稍后重试')
+      console.error('取消需求失败:', error)
+      alert('取消需求失败，请稍后重试')
     }
   }
 
   const getServicePhaseSteps = (phase: ServicePhase) => {
     const steps = [
-      { key: 'BOOKED', label: '需求方预约', done: false, current: false },
+      { key: 'BOOKED', label: '需求创建', done: false, current: false },
+      { key: 'PUBLISHED', label: '需求发布', done: false, current: false },
       { key: 'ACCEPTED', label: '服务方接单', done: false, current: false },
       { key: 'PREPARING', label: '上门准备', done: false, current: false },
       { key: 'ARRIVED', label: '入户环节', done: false, current: false },
@@ -86,7 +87,7 @@ const AppointmentListPage: React.FC = () => {
   if (isLoading) {
     return (
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-        <h2>加载预约中...</h2>
+        <h2>加载需求中...</h2>
       </div>
     )
   }
@@ -94,17 +95,17 @@ const AppointmentListPage: React.FC = () => {
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>我的预约</h2>
+        <h2>我的需求</h2>
         <Link to="/appointments/create" className="btn" style={{ backgroundColor: '#2196f3', color: 'white' }}>
-          新建预约
+          新建需求
         </Link>
       </div>
 
       {appointments.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '3rem', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
-          <p style={{ color: '#666' }}>暂无预约记录</p>
+          <p style={{ color: '#666' }}>暂无需求记录</p>
           <Link to="/appointments/create" style={{ color: '#2196f3', textDecoration: 'none' }}>
-            立即创建预约 →
+            立即创建需求 →
           </Link>
         </div>
       ) : (
@@ -128,7 +129,8 @@ const AppointmentListPage: React.FC = () => {
                   borderRadius: '4px',
                   fontSize: '0.875rem'
                 }}>
-                  {appointment.status === 'BOOKED' ? '待接单' :
+                  {appointment.status === 'BOOKED' ? '待发布' :
+                   appointment.status === 'PUBLISHED' ? '待接单' :
                    appointment.status === 'ACCEPTED' ? '已接单' :
                    appointment.status === 'ON_WAY' ? '服务中' :
                    appointment.status === 'STARTED' ? '服务中' :
@@ -187,9 +189,9 @@ const AppointmentListPage: React.FC = () => {
                 </div>
               </div>
 
-              <h3 style={{ margin: '0.5rem 0' }}>{appointment.title || '无标题预约'}</h3>
+              <h3 style={{ margin: '0.5rem 0' }}>{appointment.title || '无标题需求'}</h3>
               <p style={{ color: '#666', margin: '0.25rem 0' }}>
-                📅 预约时间: {new Date(appointment.scheduledTime).toLocaleString('zh-CN')}
+                📅 服务时间: {new Date(appointment.scheduledTime).toLocaleString('zh-CN')}
                 {appointment.durationMinutes && ` (${appointment.durationMinutes}分钟)`}
               </p>
               {appointment.address && (
@@ -238,7 +240,7 @@ const AppointmentListPage: React.FC = () => {
                       cursor: 'pointer'
                     }}
                   >
-                    取消预约
+                    取消需求
                   </button>
                 )}
                 {appointment.status === 'COMPLETED' && !appointment.review && (

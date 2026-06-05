@@ -73,7 +73,12 @@
       "Bash(dir \"E:\\\\claude-project\\\\pethome\")",
       "Bash(echo \"Exit: $?\")",
       "Bash(git remote *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m 'Initial commit: PetHome platform with backend and frontend' -m '- Spring Boot backend with JWT authentication *)",
+      "Bash(git config *)",
+      "Bash(git commit -m 'Initial commit: PetHome platform' -m '- Spring Boot backend with JWT authentication *)",
+      "Bash(git push *)",
+      "Bash(gh --version)"
     ]
   }
 }
