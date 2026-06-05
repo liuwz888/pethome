@@ -80,33 +80,35 @@ export interface Review {
 }
 
 export enum AppointmentType {
-  GROOMING = 'GROOMING',
-  VETERINARY = 'VETERINARY',
-  BOARDING = 'BOARDING',
-  TRAINING = 'TRAINING',
-  WALKING = 'WALKING',
-  SITTING = 'SITTING'
+  GROOMING = 'GROOMING',//美容护理
+  VETERINARY = 'VETERINARY',//医疗健康
+  BOARDING = 'BOARDING',//寄养托管
+  TRAINING = 'TRAINING',//行为训练
+  WALKING = 'WALKING',//遛狗服务
+  SITTING = 'SITTING',//上门喂养
 }
 
 export enum AppointmentStatus {
-  BOOKED = 'BOOKED',
-  ACCEPTED = 'ACCEPTED',
-  ON_WAY = 'ON_WAY',
-  STARTED = 'STARTED',
-  COMPLETED = 'COMPLETED',
-  PAID = 'PAID',
-  CANCELLED = 'CANCELLED',
-  NO_SHOW = 'NO_SHOW'
+  BOOKED = 'BOOKED',//需求创建
+  PUBLISHED = "PUBLISHED",//需求发布
+  ACCEPTED = 'ACCEPTED',//已接单
+  ON_WAY = 'ON_WAY',//服务中
+  STARTED = 'STARTED',//已入户
+  COMPLETED = 'COMPLETED',//服务完成
+  PAID = 'PAID',//用户支付
+  CANCELLED = 'CANCELLED',//需求已取消
+  NO_SHOW = 'NO_SHOW',//用户爽约
 }
 
 export enum ServicePhase {
-  BOOKED = 'BOOKED',
-  ACCEPTED = 'ACCEPTED',
-  PREPARING = 'PREPARING',
-  ARRIVED = 'ARRIVED',
-  IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
-  CLOSED = 'CLOSED'
+  BOOKED = 'BOOKED',  //需求创建
+  PUBLISHED = 'PUBLISHED',//需求发布
+  ACCEPTED = 'ACCEPTED',//已接单
+  PREPARING = 'PREPARING',//上门准备
+  ARRIVED = 'ARRIVED',//已入户
+  IN_PROGRESS = 'IN_PROGRESS',//服务中
+  COMPLETED = 'COMPLETED',//服务完成 
+  CLOSED = 'CLOSED',//已完成
 }
 
 export const appointmentService = {

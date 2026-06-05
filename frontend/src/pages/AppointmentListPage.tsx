@@ -7,6 +7,7 @@ const AppointmentListPage: React.FC = () => {
   const navigate = useNavigate()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
 
   useEffect(() => {
     loadAppointments()
@@ -34,6 +35,53 @@ const AppointmentListPage: React.FC = () => {
     } catch (error) {
       console.error('取消需求失败:', error)
       alert('取消需求失败，请稍后重试')
+    }
+  }
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev =>
+      prev.includes(id)
+        ? prev.filter(item => item !== id)
+        : [...prev, id]
+    )
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === appointments.length) {
+      setSelectedIds([])
+    } else {
+      setSelectedIds(appointments.map(a => a.id))
+    }
+  }
+
+  const publishAppointment = async (id: number) => {
+    try {
+      await appointmentService.updateStatus(id, AppointmentStatus.PUBLISHED)
+      loadAppointments()
+      alert('需求发布成功！')
+    } catch (error) {
+      console.error('发布需求失败:', error)
+      alert('发布需求失败，请稍后重试')
+    }
+  }
+
+  const publishSelected = async () => {
+    if (selectedIds.length === 0) {
+      alert('请先选择需要发布的需求')
+      return
+    }
+
+    if (!window.confirm(`确定要批量发布 ${selectedIds.length} 个需求吗？`)) return
+
+    try {
+      const promises = selectedIds.map(id => appointmentService.updateStatus(id, AppointmentStatus.PUBLISHED))
+      await Promise.all(promises)
+      loadAppointments()
+      setSelectedIds([])
+      alert(`成功发布 ${selectedIds.length} 个需求！`)
+    } catch (error) {
+      console.error('批量发布失败:', error)
+      alert('批量发布失败，请稍后重试')
     }
   }
 
@@ -94,11 +142,31 @@ const AppointmentListPage: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
         <h2>我的需求</h2>
-        <Link to="/appointments/create" className="btn" style={{ backgroundColor: '#2196f3', color: 'white' }}>
-          新建需求
-        </Link>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          {selectedIds.length > 0 && (
+            <button
+              onClick={publishSelected}
+              className="btn"
+              style={{ backgroundColor: '#4caf50', color: 'white' }}
+            >
+              批量发布 ({selectedIds.length})
+            </button>
+          )}
+          {selectedIds.length > 0 && selectedIds.length < appointments.length && (
+            <button
+              onClick={toggleSelectAll}
+              className="btn"
+              style={{ backgroundColor: '#e0e0e0', color: '#333' }}
+            >
+              全选
+            </button>
+          )}
+          <Link to="/appointments/create" className="btn" style={{ backgroundColor: '#2196f3', color: 'white' }}>
+            新建需求
+          </Link>
+        </div>
       </div>
 
       {appointments.length === 0 ? (
@@ -120,15 +188,24 @@ const AppointmentListPage: React.FC = () => {
                 backgroundColor: 'white'
               }}
             >
-              {/* 状态标签 */}
+              {/* 复选框和状态标签 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(appointment.id)}
+                  onChange={() => toggleSelect(appointment.id)}
+                  style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                />
                 <span style={{
                   padding: '0.25rem 0.75rem',
                   backgroundColor: getStatusColor(appointment.status),
                   color: 'white',
                   borderRadius: '4px',
-                  fontSize: '0.875rem'
-                }}>
+                  fontSize: '0.875rem',
+                  cursor: 'pointer'
+                }}
+                onClick={() => toggleSelect(appointment.id)}
+                >
                   {appointment.status === 'BOOKED' ? '待发布' :
                    appointment.status === 'PUBLISHED' ? '待接单' :
                    appointment.status === 'ACCEPTED' ? '已接单' :
@@ -216,6 +293,21 @@ const AppointmentListPage: React.FC = () => {
               )}
 
               <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', alignItems: 'center' }}>
+                {appointment.status === 'BOOKED' && (
+                  <button
+                    onClick={() => publishAppointment(appointment.id)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: '#ff9800',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    发布需求
+                  </button>
+                )}
                 <Link
                   to={`/appointments/${appointment.id}`}
                   style={{
