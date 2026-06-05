@@ -1,0 +1,346 @@
+# PetHome Platform Kubernetes Deployment
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pethome
+  labels:
+    app: pethome
+
+---
+# Database Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pethome-config
+  namespace: pethome
+data:
+  SPRING_PROFILES_ACTIVE: "production"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://pethome-db:3306/pethome?useSSL=false&serverTimezone=UTC"
+  SPRING_DATASOURCE_USERNAME: "pethome_user"
+  API_BASE_URL: "/api"
+
+---
+# Database Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: pethome-secrets
+  namespace: pethome
+type: Opaque
+data:
+  SPRING_DATASOURCE_PASSWORD: cGFzc3dvcmQ= # base64 encoded password
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY_BASE64}
+  JWT_SECRET: ${JWT_SECRET_BASE64}
+
+---
+# MySQL Database StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: pethome-db
+  namespace: pethome
+spec:
+  serviceName: pethome-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pethome-db
+  template:
+    metadata:
+      labels:
+        app: pethome-db
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pethome-secrets
+              key: SPRING_DATASOURCE_PASSWORD
+        - name: MYSQL_DATABASE
+          value: "pethome"
+        - name: MYSQL_USER
+          value: "pethome_user"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pethome-secrets
+              key: SPRING_DATASOURCE_PASSWORD
+        ports:
+        - containerPort: 3306
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/mysql
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: pethome-db-pvc
+
+---
+# MySQL Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pethome-db
+  namespace: pethome
+spec:
+  selector:
+    app: pethome-db
+  ports:
+  - port: 3306
+    targetPort: 3306
+  clusterIP: None
+
+---
+# Backend Application Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pethome-backend
+  namespace: pethome
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: pethome-backend
+  template:
+    metadata:
+      labels:
+        app: pethome-backend
+    spec:
+      containers:
+      - name: backend
+        image: pethome-backend:latest
+        ports:
+        - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: pethome-config
+        - secretRef:
+            name: pethome-secrets
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "production"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 5
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          failureThreshold: 30
+          periodSeconds: 10
+
+---
+# Backend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pethome-backend
+  namespace: pethome
+spec:
+  selector:
+    app: pethome-backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP
+
+---
+# Frontend Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pethome-frontend
+  namespace: pethome
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pethome-frontend
+  template:
+    metadata:
+      labels:
+        app: pethome-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: pethome-frontend:latest
+        ports:
+        - containerPort: 3001
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+---
+# Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pethome-frontend
+  namespace: pethome
+spec:
+  selector:
+    app: pethome-frontend
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3001
+  type: LoadBalancer
+
+---
+# Redis Cache
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pethome-cache
+  namespace: pethome
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pethome-cache
+  template:
+    metadata:
+      labels:
+        app: pethome-cache
+    spec:
+      containers:
+      - name: redis
+        image: redis:7.0-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+
+---
+# Cache Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: pethome-cache
+  namespace: pethome
+spec:
+  selector:
+    app: pethome-cache
+  ports:
+  - protocol: TCP
+    port: 6379
+    targetPort: 6379
+  type: ClusterIP
+
+---
+# Ingress for external access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pethome-ingress
+  namespace: pethome
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  tls:
+  - hosts:
+    - api.pethome.com
+    - www.pethome.com
+    secretName: pethome-tls
+  rules:
+  - host: api.pethome.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pethome-backend
+            port:
+              number: 8080
+  - host: www.pethome.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: pethome-frontend
+            port:
+              number: 80
+
+---
+# Horizontal Pod Autoscaler for Backend
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: pethome-backend-hpa
+  namespace: pethome
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: pethome-backend
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Persistent Volume Claim for Database
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pethome-db-pvc
+  namespace: pethome
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: gp3

@@ -1,0 +1,133 @@
+# PetHome Platform Cloud Configuration
+# Production-ready deployment configuration for AWS/GCP/Azure
+
+global:
+  environment: production
+  region: us-west-2
+  domain: pethome.example.com
+
+database:
+  engine: mysql
+  version: "8.0"
+  instance_class: db.t3.medium
+  allocated_storage: 100
+  backup_retention_days: 7
+  multi_az: true
+  storage_encrypted: true
+
+backend:
+  image: pethome-backend:latest
+  replicas: 3
+  cpu_limit: "1000m"
+  memory_limit: "2Gi"
+  health_check_path: "/actuator/health"
+  liveness_probe:
+    initial_delay_seconds: 30
+    period_seconds: 10
+  readiness_probe:
+    initial_delay_seconds: 5
+    period_seconds: 5
+
+frontend:
+  image: pethome-frontend:latest
+  replicas: 2
+  cpu_limit: "500m"
+  memory_limit: "1Gi"
+  static_files_cdn: true
+
+cache:
+  engine: redis
+  version: "7.0"
+  replicas: 1
+  maxmemory: "4gb"
+
+message_queue:
+  engine: rabbitmq
+  version: "3.9"
+  replicas: 1
+  queues:
+    - name: order-processing
+      durable: true
+    - name: notification-queue
+      durable: true
+
+monitoring:
+  prometheus:
+    enabled: true
+    retention: "15d"
+  grafana:
+    enabled: true
+    dashboards:
+      - platform-metrics
+      - database-performance
+      - ai-service-health
+  alertmanager:
+    enabled: true
+    routes:
+      - match:
+          severity: critical
+        receiver: email-alerts
+
+logging:
+  elasticsearch:
+    enabled: true
+    version: "8.6"
+  kibana:
+    enabled: true
+  fluentd:
+    enabled: true
+
+security:
+  waf:
+    enabled: true
+    rules:
+      - rate-limit: 1000/minute
+      - sql-injection-protection
+      - xss-protection
+  ssl:
+    certificate_provider: lets-encrypt
+    auto_renewal: true
+  secrets_manager:
+    enabled: true
+    rotation_interval: "30d"
+
+backup:
+  strategy: automated
+  schedule: "0 2 * * *" # Daily at 2 AM UTC
+  retention_days: 30
+  cross_region: true
+
+auto_scaling:
+  backend:
+    min_replicas: 2
+    max_replicas: 10
+    target_cpu_utilization: 70
+  frontend:
+    min_replicas: 1
+    max_replicas: 5
+    target_cpu_utilization: 60
+
+ci_cd:
+  pipeline:
+    stages:
+      - build
+      - test
+      - security_scan
+      - deploy_staging
+      - integration_test
+      - deploy_production
+    notifications:
+      slack_webhook: "${SLACK_WEBHOOK_URL}"
+      email_recipients: ["dev-team@pethome.com"]
+
+cost_optimization:
+  spot_instances:
+    backend: true
+    frontend: false
+    cache: false
+  reserved_instances:
+    database: 1_year
+    message_queue: 1_year
+  auto_shutdown:
+    schedule: "0 18 * * 1-5" # Weekdays 6 PM UTC
+    grace_period: "30m"

@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pethome
+      MYSQL_USER: pethome
+      MYSQL_PASSWORD: root
+    ports:
+      - "3308:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+
+  backend:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/pethome?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: pethome
+      SPRING_DATASOURCE_PASSWORD: root
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      - db
+    restart: always
+
+  frontend:
+    build: ./frontend/frontend
+    ports:
+      - "3001:3001"
+    environment:
+      API_BASE_URL: "http://localhost:8080/api"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  db_data:

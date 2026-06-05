@@ -1,0 +1,45 @@
+services:
+  db:
+    image: mysql:8.0
+    platform: linux/x86_64
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: pethome
+      MYSQL_USER: pethome
+      MYSQL_PASSWORD: root
+    ports:
+      - "3308:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    restart: always
+    network_mode: host
+
+  backend:
+    build: ./frontend/backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:3308/pethome?useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: pethome
+      SPRING_DATASOURCE_PASSWORD: root
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      - db
+    restart: always
+    network_mode: host
+
+  frontend:
+    build: ./frontend/frontend
+    ports:
+      - "3001:3001"
+    environment:
+      API_BASE_URL: http://localhost:8080/api
+    depends_on:
+      - backend
+    restart: always
+    network_mode: host
+
+volumes:
+  db_data:
+
+# Remove networks section when using host network mode

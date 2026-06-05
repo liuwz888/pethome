@@ -1,0 +1,264 @@
+# PetHome Platform Monitoring and Observability
+# Prometheus, Grafana, and Alerting Configuration
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alerts/*.rules"
+
+scrape_configs:
+  - job_name: 'pethome-backend'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['pethome-backend:8080']
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: 'backend-prod'
+
+  - job_name: 'pethome-frontend'
+    static_configs:
+      - targets: ['pethome-frontend:3001']
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: 'frontend-prod'
+
+  - job_name: 'mysql'
+    static_configs:
+      - targets: ['pethome-db:3306']
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: 'database-prod'
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['pethome-cache:6379']
+    relabel_configs:
+      - source_labels: [__address__]
+        regex: '.*'
+        target_label: instance
+        replacement: 'cache-prod'
+
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets:
+      - alertmanager:9093
+
+# Recording Rules for Performance Metrics
+rule_files:
+  - "recording_rules.yml"
+
+# Alert Rules for Production Monitoring
+groups:
+- name: pethome-alerts
+  rules:
+
+  # High CPU Usage Alerts
+  - alert: HighCPUUsage
+    expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[2m]) * 100)) > 80
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "High CPU usage detected"
+      description: "CPU usage is above 80% for more than 5 minutes"
+
+  # Memory Pressure Alerts
+  - alert: HighMemoryUsage
+    expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 20
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High memory usage detected"
+      description: "Available memory is below 20%"
+
+  # Database Connection Pool Alerts
+  - alert: DatabaseConnectionPoolExhausted
+    expr: hikaricp_connections{state="busy"} > hikaricp_connections{maxSize=100}
+    for: 2m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Database connection pool exhausted"
+      description: "All database connections are in use"
+
+  # AI Service Latency Alerts
+  - alert: AIServiceHighLatency
+    expr: histogram_quantile(0.95, rate(ai_request_duration_seconds_bucket[5m])) > 2
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      summary: "AI service experiencing high latency"
+      description: "95th percentile response time is above 2 seconds"
+
+  # Error Rate Alerts
+  - alert: HighErrorRate
+    expr: rate(http_server_requests_seconds_count{status=~"5.."}[5m]) / rate(http_server_requests_seconds_count[5m]) > 0.05
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "High HTTP error rate detected"
+      description: "Error rate is above 5%"
+
+  # Business Logic Alerts
+  - alert: OrderProcessingFailure
+    expr: rate(order_processing_failures_total[5m]) > 0
+    for: 1m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Order processing failures detected"
+      description: "Orders are failing to process"
+
+  # Payment Processing Alerts
+  - alert: PaymentGatewayTimeout
+    expr: rate(payment_gateway_timeout_total[5m]) > 0
+    for: 2m
+    labels:
+      severity: warning
+    annotations:
+      summary: "Payment gateway timeouts detected"
+      description: "Payment processing is timing out"
+
+  # AI Model Performance Alerts
+  - alert: AIModelAccuracyDrop
+    expr: ai_model_accuracy < 0.85
+    for: 10m
+    labels:
+      severity: warning
+    annotations:
+      summary: "AI model accuracy has dropped"
+      description: "Model accuracy is below acceptable threshold"
+
+  # User Engagement Alerts
+  - alert: LowUserEngagement
+    expr: rate(user_sessions_total[1h]) < rate(user_sessions_total[24h]) * 0.5
+    for: 30m
+    labels:
+      severity: info
+    annotations:
+      summary: "User engagement declining"
+      description: "Session rate is significantly lower than daily average"
+
+# Dashboard Configuration for Grafana
+dashboard_provisioning:
+  enabled: true
+  path: /etc/grafana/provisioning/dashboards
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    url: http://prometheus:9090
+    access: proxy
+    isDefault: true
+
+# Alert Manager Configuration
+alertmanager:
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: 'slack-notifications'
+      routes:
+      - match:
+          severity: critical
+        receiver: 'pager-duty'
+        continue: true
+      - match:
+          severity: warning
+        receiver: 'slack-notifications'
+
+    receivers:
+    - name: 'slack-notifications'
+      slack_configs:
+      - api_url: '${SLACK_WEBHOOK_URL}'
+        channel: '#platform-alerts'
+        title: '{{ template "custom_title" . }}'
+        text: '{{ template "custom_text" . }}'
+        send_resolved: true
+
+    - name: 'pager-duty'
+      pagerduty_configs:
+      - routing_key: '${PAGERDUTY_KEY}'
+        send_resolved: true
+
+# Log Aggregation Configuration
+loki:
+  configs:
+  - name: default
+    limits_config:
+      retention_period: 168h
+    storage_config:
+      aws:
+        bucketnames: loki-logs
+    schema_config:
+      configs:
+      - from: 2020-10-24
+        store: boltdb-shipper
+        object_store: aws
+        schema: v11
+        index:
+          prefix: index_
+          period: 24h
+
+# Tracing Configuration for Distributed Systems
+jaeger:
+  enabled: true
+  collector:
+    endpoint: jaeger-collector:14268
+  agent:
+    host_port: jaeger-agent:6831
+
+# Synthetic Monitoring
+synthetic_monitoring:
+  endpoints:
+  - name: api-health-check
+    url: https://api.pethome.com/actuator/health
+    interval: 60s
+    timeout: 10s
+    method: GET
+
+  - name: frontend-load-test
+    url: https://www.pethome.com
+    interval: 300s
+    timeout: 30s
+    method: GET
+    headers:
+      Accept: application/json
+    body: ''
+
+# Custom Metrics Exporters
+custom_exporters:
+  - name: ai-service-metrics
+    endpoint: http://ai-exporter:9100/metrics
+    scrape_interval: 30s
+
+  - name: database-performance
+    endpoint: http://db-exporter:9187/metrics
+    scrape_interval: 15s
+
+# Performance Baselines
+performance_benchmarks:
+  api_response_time:
+    p95_threshold: 500ms
+    p99_threshold: 1000ms
+
+  page_load_time:
+    threshold: 2000ms
+
+  database_query_time:
+    threshold: 100ms
+
+  ai_inference_time:
+    threshold: 200ms

@@ -1,0 +1,3 @@
+- [Backend Setup](memory/backend-setup.md) — Spring Boot backend initialized with auth, products, orders, and AI content features
+- [Development Progress](memory/development-summary.md) — Complete MVP foundation with payment integration and real-time features
+- [AI Features Implementation](memory/ai-features.md) — Advanced AI capabilities using Claude API for chat, recommendations, and community insights
