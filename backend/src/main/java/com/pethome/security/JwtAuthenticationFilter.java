@@ -42,8 +42,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         .orElseThrow(() -> new RuntimeException("用户不存在: " + username));
 
                 List<String> roles = tokenProvider.getRolesFromToken(token);
+                // 确保角色格式为 "ROLE_XYZ"
                 List<org.springframework.security.core.authority.SimpleGrantedAuthority> authorities = roles.stream()
-                        .map(org.springframework.security.core.authority.SimpleGrantedAuthority::new)
+                        .map(role -> {
+                            if (role != null && !role.startsWith("ROLE_")) {
+                                return new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role);
+                            }
+                            return new org.springframework.security.core.authority.SimpleGrantedAuthority(role);
+                        })
                         .collect(Collectors.toList());
 
                 UsernamePasswordAuthenticationToken authentication =

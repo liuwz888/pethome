@@ -78,7 +78,9 @@
       "Bash(git config *)",
       "Bash(git commit -m 'Initial commit: PetHome platform' -m '- Spring Boot backend with JWT authentication *)",
       "Bash(git push *)",
-      "Bash(gh --version)"
+      "Bash(gh --version)",
+      "Bash(git commit -m 'feat: 增加需求发布环节' -m '- 添加 BOOKED -> PUBLISHED 状态流转 *)",
+      "Bash(git commit *)"
     ]
   }
 }
