@@ -10,7 +10,6 @@ const instance = axios.create({
   },
 });
 
-// 添加请求拦截器
 instance.interceptors.request.use(
   (config) => {
     const token = getToken();
@@ -19,16 +18,11 @@ instance.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// 添加响应拦截器
 instance.interceptors.response.use(
-  (response) => {
-    return response.data;
-  },
+  (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token');
@@ -38,28 +32,52 @@ instance.interceptors.response.use(
   }
 );
 
+export interface Post {
+  id: number;
+  userId: number;
+  username: string;
+  avatar: string;
+  content: string;
+  likeCount: number;
+  commentCount: number;
+  createdAt: string;
+  comments?: Comment[];
+}
+
+export interface Comment {
+  id: number;
+  userId: number;
+  username: string;
+  avatar: string;
+  content: string;
+  createdAt: string;
+}
+
 export const postService = {
-  // 获取所有帖子
-  getAllPosts: () => instance.get('/posts'),
-
-  // 获取单个帖子
-  getPostById: (id: number) => instance.get(`/posts/${id}`),
-
-  // 发布新帖子
-  publishPost: (content: string) => {
-    return instance.post('/posts', { content });
+  getAllPosts: async (): Promise<Post[]> => {
+    const response = await instance.get<Post[]>('/posts');
+    return response.data;
   },
 
-  // 点赞帖子
-  likePost: (id: number) => {
-    return instance.post(`/posts/${id}/like`, { postId: id });
+  getPostById: async (id: number): Promise<Post> => {
+    const response = await instance.get<Post>(`/posts/${id}`);
+    return response.data;
   },
 
-  // 评论帖子
-  commentPost: (id: number, content: string) => {
-    return instance.post(`/posts/${id}/comment`, { content });
+  publishPost: async (content: string): Promise<Post> => {
+    const response = await instance.post<Post>('/posts', { content });
+    return response.data;
   },
 
-  // 删除帖子
-  deletePost: (id: number) => instance.delete(`/posts/${id}`),
+  likePost: async (id: number): Promise<void> => {
+    await instance.post(`/posts/${id}/like`, { postId: id });
+  },
+
+  commentPost: async (id: number, content: string): Promise<void> => {
+    await instance.post(`/posts/${id}/comment`, { content });
+  },
+
+  deletePost: async (id: number): Promise<void> => {
+    await instance.delete(`/posts/${id}`);
+  },
 };

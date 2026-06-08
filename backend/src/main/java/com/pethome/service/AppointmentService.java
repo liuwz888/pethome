@@ -74,6 +74,8 @@ public class AppointmentService {
         appointment.setScheduledTime(request.getScheduledTime());
         appointment.setDurationMinutes(request.getDurationMinutes() != null ? request.getDurationMinutes() : 60);
         appointment.setAddress(request.getAddress());
+        appointment.setLatitude(request.getLatitude());
+        appointment.setLongitude(request.getLongitude());
         appointment.setPhoneNumber(request.getPhoneNumber());
         appointment.setPetInfo(request.getPetInfo());
         appointment.setAmount(request.getAmount());

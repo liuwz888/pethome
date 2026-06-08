@@ -1,18 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getToken } from '@/services/authService';
-import { postService } from '@/services/postService';
-
-interface Post {
-  id: number;
-  userId: number;
-  username: string;
-  avatar: string;
-  content: string;
-  likeCount: number;
-  commentCount: number;
-  createdAt: string;
-}
+import { postService, Post } from '@/services/postService';
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();

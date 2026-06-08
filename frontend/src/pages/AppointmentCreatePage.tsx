@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getToken } from '@/services/authService'
 import { appointmentService, AppointmentType, AppointmentStatus } from '@/services/appointmentService'
+import MapPicker from '@/components/MapPicker'
 
 const AppointmentCreatePage: React.FC = () => {
   const navigate = useNavigate()
@@ -14,6 +15,8 @@ const AppointmentCreatePage: React.FC = () => {
     scheduledTime: '',
     durationMinutes: 60,
     address: '',
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
     phoneNumber: '',
     petInfo: '',
     amount: '',
@@ -55,6 +58,8 @@ const AppointmentCreatePage: React.FC = () => {
         scheduledTime: new Date(formData.scheduledTime).toISOString(),
         durationMinutes: formData.durationMinutes,
         address: formData.address,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         phoneNumber: formData.phoneNumber,
         petInfo: formData.petInfo,
         amount: formData.amount ? parseFloat(formData.amount) : undefined,
@@ -178,13 +183,23 @@ const AppointmentCreatePage: React.FC = () => {
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 'bold' }}>
             服务地址
           </label>
-          <input
-            type="text"
+          <MapPicker
             value={formData.address}
-            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-            placeholder="请输入详细地址"
-            style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #ddd' }}
+            onChange={(address, lat, lng) => {
+              setFormData(prev => ({
+                ...prev,
+                address,
+                latitude: lat,
+                longitude: lng
+              }))
+            }}
+            placeholder="请输入或选择地址"
           />
+          {formData.latitude && formData.longitude && (
+            <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+              坐标: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+            </p>
+          )}
         </div>
 
         {/* 联系电话 */}

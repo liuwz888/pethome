@@ -50,6 +50,13 @@ public class Appointment {
     private Integer durationMinutes = 60;
 
     private String address;
+
+    @Column(name = "latitude", precision = 10, scale = 6)
+    private Double latitude;
+
+    @Column(name = "longitude", precision = 10, scale = 6)
+    private Double longitude;
+
     private String phoneNumber;
 
     @Column(name = "pet_info", length = 500)

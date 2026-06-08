@@ -14,6 +14,8 @@ public class AppointmentRequest {
     private LocalDateTime scheduledTime;
     private Integer durationMinutes;
     private String address;
+    private Double latitude;
+    private Double longitude;
     private String phoneNumber;
     private String petInfo;
     private BigDecimal amount;
