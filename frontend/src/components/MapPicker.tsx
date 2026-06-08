@@ -28,8 +28,8 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
 
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    // 高德地图 JS API 2.0 版本（免费 key）
-    script.src = 'https://webapi.amap.com/maps?v=2.0&key=047355483184f73135e9f71f464e37b1';
+    // 高德地图 JS API 1.4.15 版本（免费，不需要 key）
+    script.src = 'https://webapi.amap.com/maps?v=1.4.15';
     script.async = true;
 
     script.onload = () => {
@@ -61,17 +61,17 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
     if (!AMap) return;
 
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.destroy();
       mapInstanceRef.current = null;
     }
 
-    const center = latitude && longitude
+    const center = latitude && latitude && longitude
       ? [longitude, latitude]
       : [116.397428, 39.90923];
 
     const map = new AMap.Map(mapContainerRef.current, {
       center: center,
-      zoom: 13
+      zoom: 13,
+      resizeEnable: true
     });
 
     mapInstanceRef.current = map;
