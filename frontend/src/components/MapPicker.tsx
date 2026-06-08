@@ -82,31 +82,33 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
       const lng = e.lnglat.getLng();
       const lat = e.lnglat.getLat();
 
-      // 直接使用 Geocoder，不使用 plugin
-      const geocoder = new AMap.Geocoder();
-      geocoder.getAddress([lng, lat], (status: string, result: any) => {
-        console.log('反地理编码结果:', status, result);
-        if (status === 'complete' && result.info === 'OK') {
-          const addr = result.regeocode.formattedAddress;
-          setAddress(addr);
-          setLatitude(lat);
-          setLongitude(lng);
-          onChange(addr, lat, lng);
+      // 使用 plugin 加载 Geocoder
+      AMap.plugin(['AMap.Geocoder', 'AMap.Marker'], function() {
+        const geocoder = new AMap.Geocoder();
+        geocoder.getAddress([lng, lat], (status: string, result: any) => {
+          console.log('反地理编码结果:', status, result);
+          if (status === 'complete' && result.info === 'OK') {
+            const addr = result.regeocode.formattedAddress;
+            setAddress(addr);
+            setLatitude(lat);
+            setLongitude(lng);
+            onChange(addr, lat, lng);
 
-          // 移除旧标记
-          if (markerRef.current) {
-            try { markerRef.current.setMap(null); } catch (e) {}
+            // 移除旧标记
+            if (markerRef.current) {
+              try { markerRef.current.setMap(null); } catch (e) {}
+            }
+
+            // 添加新标记
+            const position = new AMap.LngLat(lng, lat);
+            const marker = new AMap.Marker({
+              position: position
+            });
+            marker.setMap(map);
+            markerRef.current = marker;
+            console.log('标记已添加, position:', position, 'marker:', marker);
           }
-
-          // 添加新标记
-          const position = new AMap.LngLat(lng, lat);
-          const marker = new AMap.Marker({
-            position: position
-          });
-          marker.setMap(map);
-          markerRef.current = marker;
-          console.log('标记已添加, position:', position, 'marker:', marker);
-        }
+        });
       });
     };
 
