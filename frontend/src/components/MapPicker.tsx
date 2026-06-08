@@ -95,15 +95,16 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
 
             // 移除旧标记
             if (markerRef.current) {
-              markerRef.current.setMap(null);
+              try { markerRef.current.setMap(null); } catch (e) {}
             }
 
-            // 添加新标记
-            const m = new AMap.Marker({
-              position: [lng, lat]
+            // 添加新标记 - 使用 1.4 版本的构造方式
+            const m = new (window as any).AMap.Marker({
+              position: new (window as any).AMap.LngLat(lng, lat)
             });
             m.setMap(map);
             markerRef.current = m;
+            console.log('标记已添加:', m);
           }
         });
       });
@@ -148,12 +149,12 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
 
             // 移除旧标记
             if (markerRef.current) {
-              markerRef.current.setMap(null);
+              try { markerRef.current.setMap(null); } catch (e) {}
             }
 
             // 添加新标记
-            const m = new AMap.Marker({
-              position: [lng, lat]
+            const m = new (window as any).AMap.Marker({
+              position: new (window as any).AMap.LngLat(lng, lat)
             });
             m.setMap(mapInstanceRef.current);
             markerRef.current = m;
