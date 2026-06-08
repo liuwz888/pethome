@@ -13,15 +13,15 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const mapLoadedRef = useRef(false);
   const mapInstanceRef = useRef<any>(null);
 
   // 加载腾讯地图 JavaScript API
   useEffect(() => {
     // 如果已有 qq.Map 对象，跳过加载
     if (window.qq && window.qq.Map) {
-      mapLoadedRef.current = true;
+      setIsMapReady(true);
       return;
     }
 
@@ -34,11 +34,12 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
     // 定义全局回调函数
     (window as any).initMap = () => {
       console.log('腾讯地图 API 加载完成');
-      mapLoadedRef.current = true;
+      setIsMapReady(true);
     };
 
     script.onerror = () => {
       console.error('腾讯地图 API 加载失败');
+      setIsMapReady(true); // 即使加载失败也设置为 ready，避免无限等待
     };
     document.body.appendChild(script);
 
@@ -55,7 +56,13 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
 
   // 初始化地图
   useEffect(() => {
-    if (!mapLoadedRef.current || !isOpen || !mapContainerRef.current) {
+    if (!isMapReady || !isOpen || !mapContainerRef.current) {
+      return;
+    }
+
+    // 等待 qq.maps 确实可用
+    if (!window.qq || !window.qq.maps) {
+      console.error('qq.maps 未定义');
       return;
     }
 
@@ -109,13 +116,20 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
     });
 
     return () => {
-      window.qq.maps.event.removeListener(clickListener);
+      if (clickListener) {
+        window.qq.maps.event.removeListener(clickListener);
+      }
     };
-  }, [isOpen, latitude, longitude]);
+  }, [isMapReady, isOpen, latitude, longitude]);
 
   // 搜索地址
   const handleSearch = () => {
-    if (!searchQuery.trim() || !mapLoadedRef.current) {
+    if (!searchQuery.trim() || !isMapReady) {
+      return;
+    }
+
+    if (!window.qq || !window.qq.maps) {
+      alert('地图服务未就绪，请稍后再试');
       return;
     }
 
@@ -181,17 +195,18 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
         />
         <button
           onClick={() => setIsOpen(!isOpen)}
+          disabled={!isMapReady}
           style={{
             padding: '0.75rem 1rem',
-            backgroundColor: '#2196f3',
+            backgroundColor: !isMapReady ? '#ccc' : '#2196f3',
             color: 'white',
             border: 'none',
             borderRadius: '4px',
-            cursor: 'pointer',
+            cursor: !isMapReady ? 'not-allowed' : 'pointer',
             whiteSpace: 'nowrap'
           }}
         >
-          {isOpen ? '收起地图' : '地图选点'}
+          {isOpen ? '收起地图' : isMapReady ? '地图选点' : '加载地图...'}
         </button>
       </div>
 
