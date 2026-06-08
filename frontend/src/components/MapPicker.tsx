@@ -18,51 +18,27 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<any>(null);
 
-  // 加载腾讯地图 JavaScript API
+  // 加载高德地图 JavaScript API（使用较老版本，不需要 key）
   useEffect(() => {
-    // 如果已有 qq 对象，跳过加载
-    if (window.qq) {
-      // 检查 qq.maps 是否存在
-      const checkMaps = () => {
-        if (window.qq && window.qq.maps) {
-          setIsMapReady(true);
-        } else {
-          // 等待一下再检查
-          setTimeout(checkMaps, 100);
-        }
-      };
-      checkMaps();
+    // 如果已有 AMap 对象，跳过加载
+    if (window.AMap) {
+      setIsMapReady(true);
       return;
     }
 
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    // 使用腾讯地图 JavaScript API（免费，无需 key）
-    // 不使用 callback，直接监听全局对象
-    script.src = 'https://map.qq.com/api/js?v=3.exp&libraries=geometry';
+    // 使用高德地图 JS API 1.4.15 版本（不需要 key）
+    script.src = 'https://webapi.amap.com/maps?v=1.4.15';
     script.async = true;
 
     script.onload = () => {
-      console.log('腾讯地图 API 脚本加载完成');
-      // 腾讯地图 API 会自动将 qq 对象挂载到 window
-      const checkMaps = () => {
-        if (window.qq && window.qq.maps) {
-          console.log('腾讯地图 maps 对象就绪');
-          setIsMapReady(true);
-        } else if (window.qq) {
-          console.log('qq 对象存在但 qq.maps 尚未就绪，等待...');
-          setTimeout(checkMaps, 100);
-        } else {
-          console.log('qq 对象不存在');
-          setIsMapReady(true); // 停止等待
-          setMapInitError(true);
-        }
-      };
-      setTimeout(checkMaps, 500); // 初始延迟
+      console.log('高德地图 API 加载完成');
+      setIsMapReady(true);
     };
 
     script.onerror = () => {
-      console.error('腾讯地图 API 加载失败');
+      console.error('高德地图 API 加载失败');
       setIsMapReady(true);
       setMapInitError(true);
     };
@@ -82,24 +58,24 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
       return;
     }
 
-    // 确保 qq.maps 存在
-    if (!window.qq || !window.qq.maps) {
-      console.error('qq.maps 未定义');
+    const AMap = window.AMap;
+    if (!AMap) {
+      console.error('AMap 未定义');
       return;
     }
 
     // 销毁旧地图
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.setMap(null);
+      mapInstanceRef.current.destroy();
       mapInstanceRef.current = null;
     }
 
     // 创建地图
     const center = latitude && longitude
-      ? new window.qq.maps.LatLng(latitude, longitude)
-      : new window.qq.maps.LatLng(39.90923, 116.397428); // 默认北京
+      ? [longitude, latitude]
+      : [116.397428, 39.90923]; // 默认北京
 
-    const map = new window.qq.maps.Map(mapContainerRef.current, {
+    const map = new AMap.Map(mapContainerRef.current, {
       center: center,
       zoom: 13
     });
@@ -107,34 +83,35 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
     mapInstanceRef.current = map;
 
     // 添加点击事件
-    const clickListener = window.qq.maps.event.addListener(map, 'click', (e: any) => {
-      const lat = e.latLng.getLat();
-      const lng = e.latLng.getLng();
+    const clickListener = AMap.event.addListener(map, 'click', (e: any) => {
+      const lng = e.lnglat.getLng();
+      const lat = e.lnglat.getLat();
 
       // 反地理编码获取地址
-      const geocoder = new window.qq.maps.Geocoder();
-      window.qq.maps.event.addListener(geocoder, 'complete', (result: any) => {
-        if (result && result.addressComponents) {
-          const address = result.formattedAddress;
-          setAddress(address);
-          setLatitude(lat);
-          setLongitude(lng);
-          onChange(address, lat, lng);
+      AMap.plugin('AMap.Geocoder', () => {
+        const geocoder = new AMap.Geocoder();
+        geocoder.getAddress([lng, lat], (status: string, result: any) => {
+          if (status === 'complete' && result.info === 'OK') {
+            const address = result.regeocode.formattedAddress;
+            setAddress(address);
+            setLatitude(lat);
+            setLongitude(lng);
+            onChange(address, lat, lng);
 
-          // 更新标记
-          mapInstanceRef.current.clearOverlays();
-          const marker = new window.qq.maps.Marker({
-            position: e.latLng,
-            map: mapInstanceRef.current
-          });
-        }
+            // 更新标记
+            mapInstanceRef.current.clearOverlays();
+            const marker = new AMap.Marker({
+              position: [lng, lat],
+              map: mapInstanceRef.current
+            });
+          }
+        });
       });
-      geocoder.getAddress(e.latLng);
     });
 
     return () => {
       if (clickListener) {
-        window.qq.maps.event.removeListener(clickListener);
+        AMap.event.removeListener(clickListener);
       }
     };
   }, [isMapReady, isOpen, latitude, longitude, mapInitError]);
@@ -145,41 +122,43 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
       return;
     }
 
-    if (!window.qq || !window.qq.maps) {
+    const AMap = window.AMap;
+    if (!AMap) {
       alert('地图服务未就绪，请稍后再试');
       return;
     }
 
     setIsLoading(true);
 
-    const geocoder = new window.qq.maps.Geocoder();
-    window.qq.maps.event.addListener(geocoder, 'complete', (result: any) => {
-      setIsLoading(false);
-      if (result && result.addressComponents) {
-        const location = result;
-        const lng = location.location.lng;
-        const lat = location.location.lat;
+    AMap.plugin('AMap.Geocoder', () => {
+      const geocoder = new AMap.Geocoder();
+      geocoder.getLocation(searchQuery, (status: string, result: any) => {
+        setIsLoading(false);
+        if (status === 'complete' && result.info === 'OK') {
+          const location = result.geocodes[0];
+          const lng = location.location.lng;
+          const lat = location.location.lat;
 
-        setAddress(result.formattedAddress);
-        setLatitude(lat);
-        setLongitude(lng);
-        onChange(result.formattedAddress, lat, lng);
+          setAddress(location.formattedAddress);
+          setLatitude(lat);
+          setLongitude(lng);
+          onChange(location.formattedAddress, lat, lng);
 
-        // 更新地图
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.setCenter(new window.qq.maps.LatLng(lat, lng));
-          mapInstanceRef.current.setZoom(15);
-          mapInstanceRef.current.clearOverlays();
-          const marker = new window.qq.maps.Marker({
-            position: new window.qq.maps.LatLng(lat, lng),
-            map: mapInstanceRef.current
-          });
+          // 更新地图
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.setCenter([lng, lat]);
+            mapInstanceRef.current.setZoom(15);
+            mapInstanceRef.current.clearOverlays();
+            const marker = new AMap.Marker({
+              position: [lng, lat],
+              map: mapInstanceRef.current
+            });
+          }
+        } else {
+          alert('未找到匹配的位置');
         }
-      } else {
-        alert('未找到匹配的位置');
-      }
+      });
     });
-    geocoder.getLocation(searchQuery);
   };
 
   // 处理地址输入变化
