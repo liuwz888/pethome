@@ -77,7 +77,8 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
     mapInstanceRef.current = map;
 
     // 添加点击事件
-    map.on('click', (e: any) => {
+    const clickHandler = (e: any) => {
+      console.log('地图点击事件触发:', e);
       const lng = e.lnglat.getLng();
       const lat = e.lnglat.getLat();
 
@@ -92,17 +93,27 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
             setLongitude(lng);
             onChange(addr, lat, lng);
 
-            // 更新标记
-            mapInstanceRef.current.clearOverlays();
+            // 移除旧标记
+            if (markerRef.current) {
+              markerRef.current.setMap(null);
+            }
+
+            // 添加新标记
             const m = new AMap.Marker({
               position: [lng, lat]
             });
+            m.setMap(map);
             markerRef.current = m;
-            mapInstanceRef.current.add(m);
           }
         });
       });
-    });
+    };
+
+    AMap.event.addListener(map, 'click', clickHandler);
+
+    return () => {
+      AMap.event.removeListener(clickHandler);
+    };
   }, [isMapReady, isOpen, latitude, longitude, mapInitError]);
 
   // 搜索地址
@@ -134,12 +145,18 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
           if (mapInstanceRef.current) {
             mapInstanceRef.current.setCenter([lng, lat]);
             mapInstanceRef.current.setZoom(15);
-            mapInstanceRef.current.clearOverlays();
+
+            // 移除旧标记
+            if (markerRef.current) {
+              markerRef.current.setMap(null);
+            }
+
+            // 添加新标记
             const m = new AMap.Marker({
               position: [lng, lat]
             });
+            m.setMap(mapInstanceRef.current);
             markerRef.current = m;
-            mapInstanceRef.current.add(m);
           }
         } else {
           alert('未找到位置');
