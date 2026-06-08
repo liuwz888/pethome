@@ -28,8 +28,9 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
 
     const script = document.createElement('script');
     script.type = 'text/javascript';
-    // 高德地图 JS API 1.4.15 版本（免费，不需要 key）
-    script.src = 'https://webapi.amap.com/maps?v=1.4.15';
+    // 高德地图 JS API 2.0 版本（需要 key，免费版可用）
+    // 请在 https://console.amap.com/dev/key/app 注册获取免费 key
+    script.src = 'https://webapi.amap.com/maps?v=2.0&key=047355483184f73135e9f71f464e37b1';
     script.async = true;
 
     script.onload = () => {
@@ -82,33 +83,31 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
       const lng = e.lnglat.getLng();
       const lat = e.lnglat.getLat();
 
-      // 使用 plugin 加载 Geocoder
-      AMap.plugin(['AMap.Geocoder', 'AMap.Marker'], function() {
-        const geocoder = new AMap.Geocoder();
-        geocoder.getAddress([lng, lat], (status: string, result: any) => {
-          console.log('反地理编码结果:', status, result);
-          if (status === 'complete' && result.info === 'OK') {
-            const addr = result.regeocode.formattedAddress;
-            setAddress(addr);
-            setLatitude(lat);
-            setLongitude(lng);
-            onChange(addr, lat, lng);
+      // 直接使用 Geocoder，不需要 plugin
+      const geocoder = new AMap.Geocoder();
+      geocoder.getAddress([lng, lat], (status: string, result: any) => {
+        console.log('反地理编码结果:', status, result);
+        if (status === 'complete' && result.info === 'OK') {
+          const addr = result.regeocode.formattedAddress;
+          setAddress(addr);
+          setLatitude(lat);
+          setLongitude(lng);
+          onChange(addr, lat, lng);
 
-            // 移除旧标记
-            if (markerRef.current) {
-              try { markerRef.current.setMap(null); } catch (e) {}
-            }
-
-            // 添加新标记
-            const position = new AMap.LngLat(lng, lat);
-            const marker = new AMap.Marker({
-              position: position
-            });
-            marker.setMap(map);
-            markerRef.current = marker;
-            console.log('标记已添加, position:', position, 'marker:', marker);
+          // 移除旧标记
+          if (markerRef.current) {
+            try { markerRef.current.setMap(null); } catch (e) {}
           }
-        });
+
+          // 添加新标记
+          const position = new AMap.LngLat(lng, lat);
+          const marker = new AMap.Marker({
+            position: position
+          });
+          marker.setMap(map);
+          markerRef.current = marker;
+          console.log('标记已添加, position:', position, 'marker:', marker);
+        }
       });
     };
 
@@ -131,11 +130,11 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
 
     setIsLoading(true);
 
-    AMap.plugin('AMap.Geocoder', () => {
-      const geocoder = new AMap.Geocoder();
-      geocoder.getLocation(searchQuery, (status: string, result: any) => {
-        setIsLoading(false);
-        if (status === 'complete' && result.info === 'OK') {
+    // 直接使用 Geocoder，不需要 plugin
+    const geocoder = new AMap.Geocoder();
+    geocoder.getLocation(searchQuery, (status: string, result: any) => {
+      setIsLoading(false);
+      if (status === 'complete' && result.info === 'OK') {
           const loc = result.geocodes[0];
           const lng = loc.location.lng;
           const lat = loc.location.lat;
