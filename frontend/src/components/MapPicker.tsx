@@ -240,7 +240,7 @@ const MapPicker: React.FC<MapPickerProps> = ({ value, onChange, placeholder }) =
             ref={mapContainerRef}
             style={{
               width: '100%',
-              height: '300px',
+              height: '400px',
               position: 'relative'
             }}
           />
